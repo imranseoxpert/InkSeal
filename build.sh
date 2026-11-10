@@ -1,10 +1,15 @@
 #!/bin/bash
-# Builds InkSeal.app into ./build. Works with Xcode or with just the Command Line Tools.
+# Builds a universal (Apple Silicon + Intel) InkSeal.app into ./build.
+# Works with Xcode or with just the Command Line Tools.
+#   ./build.sh               universal build
+#   ARCHS=arm64 ./build.sh   single-architecture build (faster)
 set -euo pipefail
 cd "$(dirname "$0")"
 
 APP_NAME="InkSeal"
 APP="build/$APP_NAME.app"
+ARCHS="${ARCHS:-arm64 x86_64}"
+MIN_MACOS="14.0"
 
 # With only the Command Line Tools, the newest SDK declares SwiftUI's @State as a macro whose
 # plugin ships with Xcode. Fall back to the newest SDK that doesn't need it.
@@ -14,14 +19,22 @@ if [ -z "${SDKROOT:-}" ] && ! xcode-select -p 2>/dev/null | grep -q "Xcode"; the
 fi
 [ -n "${SDKROOT:-}" ] && echo "Using SDK: $SDKROOT"
 
-echo "Compiling…"
-swift build -c release
-BIN="$(swift build -c release --show-bin-path)/$APP_NAME"
+BINARIES=()
+for arch in $ARCHS; do
+  echo "Compiling for $arch…"
+  triple="$arch-apple-macosx$MIN_MACOS"
+  swift build -c release --triple "$triple" --scratch-path ".build/$arch"
+  BINARIES+=("$(swift build -c release --triple "$triple" --scratch-path ".build/$arch" --show-bin-path)/$APP_NAME")
+done
 
 echo "Assembling $APP…"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp "$BIN" "$APP/Contents/MacOS/$APP_NAME"
+if [ "${#BINARIES[@]}" -gt 1 ]; then
+  lipo -create "${BINARIES[@]}" -output "$APP/Contents/MacOS/$APP_NAME"
+else
+  cp "${BINARIES[0]}" "$APP/Contents/MacOS/$APP_NAME"
+fi
 cp Resources/Info.plist "$APP/Contents/Info.plist"
 
 if [ ! -f build/AppIcon.icns ]; then
@@ -37,4 +50,5 @@ fi
 cp build/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 
 codesign --force --sign - "$APP" >/dev/null 2>&1 || echo "(ad-hoc signing skipped)"
+echo "Architectures: $(lipo -archs "$APP/Contents/MacOS/$APP_NAME")"
 echo "Done → $APP"

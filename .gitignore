@@ -8,3 +8,6 @@ build/
 
 # macOS
 .DS_Store
+
+# Release disk images (attach to GitHub releases instead)
+dist/

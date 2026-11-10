@@ -2,14 +2,24 @@
 
 A native macOS document-signing app (SwiftUI + PDFKit), similar in spirit to DocuSign / Documenso, that runs entirely on your Mac.
 
-## Build & run
+## Download
+
+Get the latest **InkSeal-x.y.dmg** from the [Releases page](https://github.com/imranseoxpert/InkSeal/releases/latest). It's a universal app that runs on Apple Silicon and Intel Macs with macOS 14 Sonoma or later.
+
+1. Open the DMG and drag **InkSeal** into **Applications**.
+2. Open InkSeal. Because the app isn't notarized by Apple yet, macOS blocks it the first time.
+3. Go to **System Settings → Privacy & Security**, scroll down, and click **Open Anyway** next to the InkSeal message. Confirm, and InkSeal opens. You only need to do this once.
+
+   If you prefer Terminal: `xattr -dr com.apple.quarantine /Applications/InkSeal.app`
+
+## Build from source
 
 ```bash
-./build.sh
-open build/InkSeal.app
+./build.sh        # universal app → build/InkSeal.app
+./make_dmg.sh     # app + installer → dist/InkSeal-<version>.dmg
 ```
 
-Needs macOS 14+ and either Xcode or the Command Line Tools. Drag `build/InkSeal.app` into `/Applications` to install.
+Needs macOS 14+ and either Xcode or the Command Line Tools. Use `ARCHS=arm64 ./build.sh` for a faster single-architecture build.
 
 ## Features
 
